@@ -1,5 +1,7 @@
-@Entity
+Stock.java
+_____________
 
+@Entity
 public class Stock {
     private String ticker;
     private String name;
@@ -23,6 +25,9 @@ public class Stock {
 }
 _______________________
 
+StockService
+______________
+
 @Service
 public class StockService {
 
@@ -37,6 +42,9 @@ public class StockService {
     }
 }
 __________________________________
+
+StockController
+________________
 
 @RestController
 @RequestMapping("/stocks")
