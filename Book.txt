@@ -1,0 +1,226 @@
+package com.wecp.library.domain;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import java.io.Serializable;
+
+@Entity
+public class Book implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
+
+    private String name;
+
+    private Integer quantity;
+
+    public Long getId() {
+        return id;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+}
+_________________________________________________
+
+package com.wecp.library.domain;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import java.io.Serializable;
+
+@Entity
+public class User implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
+
+    private String username;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+}
+________________________________________________________
+
+package com.wecp.library.domain;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import reactor.core.publisher.Mono;
+
+import javax.persistence.*;
+import java.io.Serializable;
+import java.time.LocalDate;
+
+@Entity
+public class Issue implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
+
+    private LocalDate issueDate;
+
+    private LocalDate returnDate;
+
+    private Integer period;
+
+    private Integer fine;
+
+    @ManyToOne
+    @JsonIgnoreProperties(value = "issues", allowSetters = true)
+    private Book book;
+
+    private Long userId;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public LocalDate getIssueDate() {
+        return issueDate;
+    }
+
+    public void setIssueDate(LocalDate issueDate) {
+        this.issueDate = issueDate;
+    }
+
+    public LocalDate getReturnDate() {
+        return returnDate;
+    }
+
+    public void setReturnDate(LocalDate returnDate) {
+        this.returnDate = returnDate;
+    }
+
+    public Integer getPeriod() {
+        return period;
+    }
+
+    public void setPeriod(Integer period) {
+        this.period = period;
+    }
+
+    public Integer getFine() {
+        return fine;
+    }
+
+    public void setFine(Integer fine) {
+        this.fine = fine;
+    }
+
+    public Book getBook() {
+        return book;
+    }
+
+    public void setBook(Book book) {
+        this.book = book;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+}
+_______________________________________________________
+
+@RestController
+@RequestMapping("/api/v1")
+public class LibraryController {
+
+    @Autowired
+    private BookRepository bookRepository;
+    
+    @Autowired
+    private IssueRepository issueRepository;
+
+
+    @PostMapping("/issueBook")
+    public ResponseEntity<Issue> issueBook(@RequestBody Issue issue) {
+        Book book = issue.getBook();
+        if (book.getQuantity() == 0) {
+            throw new BookNotAvailableException("Book is not available for issuing.");
+        }
+
+        book.setQuantity(book.getQuantity() - 1);
+        bookRepository.save(book);
+
+        Issue savedIssue = issueRepository.save(issue);
+        return ResponseEntity.ok(savedIssue);
+    }
+
+
+    @PostMapping("/depositBook")
+    public Mono<Integer> depositBook(@RequestBody Issue issue) {
+        LocalDate issueDate = issue.getIssueDate();
+    LocalDate returnDate = issue.getReturnDate();
+    int period = issue.getPeriod();
+
+    long actualDays = ChronoUnit.DAYS.between(issueDate, returnDate);
+
+    int fine = 0;
+    if (actualDays > period) {
+        fine = issue.getFine();
+    }
+
+    return Mono.just(fine);
+}
+}
+__________________________________________
+
+package com.wecp.library.controller.exception;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+@ResponseStatus(HttpStatus.NOT_FOUND)
+public class BookNotAvailableException extends RuntimeException {
+    public BookNotAvailableException(String msg){
+        super(msg);
+    }
+}
